@@ -1,0 +1,103 @@
+---
+title: "01_eurovision_May_22"
+output: html_document
+---
+
+
+```{r}
+# install.packages("waffle")
+# install.packages("ggExtra")
+# install.packages("ggside")
+# install.packages("ggnewscale")
+# install.packages("ggpubr")
+# install.packages("ggpattern")
+library(tidyverse)
+library(janitor)
+library(waffle)
+library(ggExtra)
+library(ggpattern)
+library(ggnewscale)
+library(ggpubr)
+library(ggside)
+library(gganimate)
+
+```
+
+
+```{r}
+eurovision <- read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-05-17/eurovision.csv") %>% write_csv("data/eurovision.csv")
+
+
+
+votes <- read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-05-17/eurovision-votes.csv") %>% write_csv("data/eurovision_votes.csv")
+
+
+# tuesdata <- tidytuesdayR::tt_load('2022-05-17')
+# tuesdata <- tidytuesdayR::tt_load(2022, week = 20)
+# 
+# eurovision <- tuesdata$eurovision
+
+
+
+
+
+
+```
+
+#Clean up data
+
+```{r}
+
+unique(eurovision$section) # maybe fuilter by final?
+
+eurovision_finals <- bind_rows(eurovision %>% filter(section == "final") %>% arrange(-year),
+eurovision %>% filter(section == "grand-final") %>% arrange(-year)) %>% mutate(section == "final")
+
+
+  
+totals_through_time <- eurovision_finals %>% 
+  arrange(-year) %>% 
+  mutate(artist_country = factor(artist_country)) %>% 
+  group_by(artist_country, year) %>%
+  summarise(total_points = sum(total_points)) %>% 
+  arrange(year, total_points) %>% 
+  mutate(total_points = case_when(is.na(total_points)~0,
+                                  TRUE ~ total_points)) %>% 
+  arrange(artist_country)
+  
+
+
+
+my_plot <- ggplot(data = eurovision_finals)+
+  geom_point(aes(x = running_order, y = rank, size=total_points, colour = year))+
+  theme_pubr()+
+  gganimate::transition_states(year)+
+  ease_aes("linear")
+  
+  
+my_anim <- animate(my_plot, duration = 60, fps = 6, width = 200, height = 200, renderer = gifski_renderer())
+
+gganimate::anim_save(filename = "outputs/my_anim.gif")
+
+my_anim
+```
+
+```{r}
+library(gapminder)
+
+p <- ggplot(gapminder, aes(gdpPercap, lifeExp, size = pop, colour = country)) +
+  geom_point(alpha = 0.7, show.legend = FALSE) +
+  scale_colour_manual(values = country_colors) +
+  scale_size(range = c(2, 12)) +
+  scale_x_log10() +
+  facet_wrap(~continent) +
+  # Here comes the gganimate specific bits
+  labs(title = 'Year: {frame_time}', x = 'GDP per capita', y = 'life expectancy') +
+  transition_time(year) +
+  ease_aes('linear')
+
+anim_save("outputs/p.gif")
+
+
+```
+
